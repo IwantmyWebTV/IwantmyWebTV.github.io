@@ -59,9 +59,10 @@
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(255, 102, 0, 0.3);
+            background: #000;
         }
         
-        #player {
+        #player-container {
             position: absolute;
             top: 0;
             left: 0;
@@ -128,6 +129,28 @@
             background: #ff8800;
         }
         
+        .transition-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #ff6600;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 10;
+        }
+        
+        .transition-overlay.show {
+            opacity: 1;
+        }
+        
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -150,7 +173,8 @@
             Loading your playlist...
         </div>
         <div id="player-wrapper" style="display: none;">
-            <div id="player"></div>
+            <div id="player-container"></div>
+            <div class="transition-overlay" id="transition">Loading next video...</div>
         </div>
     </div>
     
@@ -178,6 +202,8 @@
         let player;
         let playlist = [];
         let currentVideoIndex = 0;
+        let isApiReady = false;
+        let playerElementCounter = 0; // To create unique IDs
 
         // Shuffle array function
         function shuffleArray(array) {
@@ -216,6 +242,7 @@
 
         // Called automatically when YouTube IFrame API is ready
         function onYouTubeIframeAPIReady() {
+            isApiReady = true;
             loadPlaylist().then(() => {
                 if (playlist.length === 0) {
                     document.getElementById('loading').innerHTML = 
@@ -223,28 +250,47 @@
                     return;
                 }
 
-                // Create the player
-                player = new YT.Player('player', {
-                    height: '100%',
-                    width: '100%',
-                    videoId: playlist[0],
-                    playerVars: {
-                        autoplay: 1,
-                        controls: 1,
-                        modestbranding: 1,
-                        rel: 0,
-                        iv_load_policy: 3,
-                        fs: 1,
-                        playsinline: 1
-                    },
-                    events: {
-                        onReady: onPlayerReady,
-                        onStateChange: onPlayerStateChange,
-                        onError: onPlayerError
-                    }
-                });
+                // Create the first player
+                createPlayer(playlist[0]);
             }).catch(error => {
                 console.error('Failed to initialize player:', error);
+            });
+        }
+
+        function createPlayer(videoId) {
+            console.log(`Creating fresh player for video ${currentVideoIndex + 1}: ${videoId}`);
+            
+            // Destroy existing player if it exists
+            if (player && player.destroy) {
+                player.destroy();
+                player = null;
+            }
+            
+            // Create a new div for the player with unique ID
+            playerElementCounter++;
+            const playerId = `player-${playerElementCounter}`;
+            const container = document.getElementById('player-container');
+            container.innerHTML = `<div id="${playerId}" style="width: 100%; height: 100%;"></div>`;
+            
+            // Create new player instance
+            player = new YT.Player(playerId, {
+                height: '100%',
+                width: '100%',
+                videoId: videoId,
+                playerVars: {
+                    autoplay: 1,
+                    controls: 1,
+                    modestbranding: 1,
+                    rel: 0,
+                    iv_load_policy: 3,
+                    fs: 1,
+                    playsinline: 1
+                },
+                events: {
+                    onReady: onPlayerReady,
+                    onStateChange: onPlayerStateChange,
+                    onError: onPlayerError
+                }
             });
         }
 
@@ -252,6 +298,9 @@
             // Hide loading, show player
             document.getElementById('loading').style.display = 'none';
             document.getElementById('player-wrapper').style.display = 'block';
+            
+            // Hide transition overlay
+            document.getElementById('transition').classList.remove('show');
             
             // Start playing
             event.target.playVideo();
@@ -261,6 +310,7 @@
         function onPlayerStateChange(event) {
             // When video ends, play next
             if (event.data === YT.PlayerState.ENDED) {
+                console.log('Video ended - loading next video with fresh player');
                 playNextVideo();
             }
             
@@ -279,6 +329,9 @@
         }
 
         function playNextVideo() {
+            // Show transition overlay
+            document.getElementById('transition').classList.add('show');
+            
             currentVideoIndex++;
             
             // Loop back to start when reaching end
@@ -288,12 +341,16 @@
                 currentVideoIndex = 0;
             }
             
-            // Load next video
-            player.loadVideoById(playlist[currentVideoIndex]);
-            updateNowPlaying();
+            // Small delay for smoother transition
+            setTimeout(() => {
+                createPlayer(playlist[currentVideoIndex]);
+            }, 500);
         }
 
         function previousVideo() {
+            // Show transition overlay
+            document.getElementById('transition').classList.add('show');
+            
             currentVideoIndex--;
             
             // Loop to end if going before start
@@ -301,8 +358,9 @@
                 currentVideoIndex = playlist.length - 1;
             }
             
-            player.loadVideoById(playlist[currentVideoIndex]);
-            updateNowPlaying();
+            setTimeout(() => {
+                createPlayer(playlist[currentVideoIndex]);
+            }, 500);
         }
 
         function nextVideo() {
@@ -338,3 +396,4 @@
     </script>
 </body>
 </html>
+  
