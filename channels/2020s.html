@@ -191,6 +191,56 @@
         let playlist = [];
         let currentVideoIndex = 0;
 
+        // ========== NEW: FULLSCREEN TRACKING ==========
+        // Check if fullscreen was active before reload
+        let wasFullscreen = localStorage.getItem('mtv_fullscreen') === 'true';
+
+        // Listen for fullscreen changes and save state
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                localStorage.setItem('mtv_fullscreen', 'true');
+                console.log('Entered fullscreen - will restore after reload');
+            } else {
+                localStorage.setItem('mtv_fullscreen', 'false');
+                console.log('Exited fullscreen');
+            }
+        });
+
+        // Also listen for webkit/moz variants (Safari, older Firefox)
+        document.addEventListener('webkitfullscreenchange', () => {
+            if (document.webkitFullscreenElement) {
+                localStorage.setItem('mtv_fullscreen', 'true');
+            } else {
+                localStorage.setItem('mtv_fullscreen', 'false');
+            }
+        });
+
+        document.addEventListener('mozfullscreenchange', () => {
+            if (document.mozFullScreenElement) {
+                localStorage.setItem('mtv_fullscreen', 'true');
+            } else {
+                localStorage.setItem('mtv_fullscreen', 'false');
+            }
+        });
+
+        // Function to enter fullscreen
+        function enterFullscreen() {
+            const playerWrapper = document.getElementById('player-wrapper');
+            
+            if (playerWrapper.requestFullscreen) {
+                playerWrapper.requestFullscreen();
+            } else if (playerWrapper.webkitRequestFullscreen) {
+                playerWrapper.webkitRequestFullscreen(); // Safari
+            } else if (playerWrapper.mozRequestFullScreen) {
+                playerWrapper.mozRequestFullScreen(); // Firefox
+            } else if (playerWrapper.msRequestFullscreen) {
+                playerWrapper.msRequestFullscreen(); // IE/Edge
+            }
+            
+            console.log('Attempting to restore fullscreen...');
+        }
+        // ========== END FULLSCREEN TRACKING ==========
+
         // Shuffle array function
         function shuffleArray(array) {
             const shuffled = [...array];
@@ -327,6 +377,16 @@
             // Start playing
             event.target.playVideo();
             updateNowPlaying();
+            
+            // ========== NEW: AUTO-RESTORE FULLSCREEN ==========
+            // If fullscreen was active before reload, restore it
+            if (wasFullscreen) {
+                console.log('Fullscreen was active - restoring in 1 second...');
+                setTimeout(() => {
+                    enterFullscreen();
+                }, 1000); // Wait 1 second for video to load properly
+            }
+            // ========== END AUTO-RESTORE ==========
         }
 
         function onPlayerStateChange(event) {
