@@ -128,6 +128,14 @@
             background: #ff8800;
         }
         
+        .reset-btn {
+            background: #666;
+        }
+        
+        .reset-btn:hover {
+            background: #888;
+        }
+        
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -162,13 +170,17 @@
                 <div class="video-counter" id="video-counter">Video 1 of 0</div>
             </div>
             <div class="controls">
-                <button class="control-btn" onclick="previousVideo()">⏮ Previous</button>
-                <button class="control-btn" onclick="nextVideo()">Next ⏭</button>
+                <button class="control-btn" onclick="skipVideo()">Skip to Next ⏭</button>
+                <button class="control-btn reset-btn" onclick="resetPlaylist()">🔀 Reshuffle Playlist</button>
             </div>
         </div>
     </div>
 
     <script>
+        const CHANNEL_NAME = '2010s';
+        const PLAYLIST_KEY = `mtv_playlist_${CHANNEL_NAME}`;
+        const INDEX_KEY = `mtv_index_${CHANNEL_NAME}`;
+        
         // Load YouTube IFrame API
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
@@ -189,21 +201,38 @@
             return shuffled;
         }
 
-        // Load playlist from JSON
+        // Load or initialize playlist from localStorage
         async function loadPlaylist() {
             try {
-                const response = await fetch('../data/2010s_videos.json');
-                if (!response.ok) throw new Error('Failed to load playlist');
+                // Check if we have a saved playlist
+                const savedPlaylist = localStorage.getItem(PLAYLIST_KEY);
+                const savedIndex = localStorage.getItem(INDEX_KEY);
                 
-                const videos = await response.json();
+                if (savedPlaylist && savedIndex !== null) {
+                    // Resume from saved state
+                    playlist = JSON.parse(savedPlaylist);
+                    currentVideoIndex = parseInt(savedIndex);
+                    console.log(`Resuming playlist at video ${currentVideoIndex + 1} of ${playlist.length}`);
+                } else {
+                    // First time - load and shuffle
+                    const response = await fetch('../data/2010s_videos.json');
+                    if (!response.ok) throw new Error('Failed to load playlist');
+                    
+                    const videos = await response.json();
+                    const videoIds = videos.map(v => 
+                        typeof v === 'string' ? v : v.youtube_id
+                    );
+                    
+                    playlist = shuffleArray(videoIds);
+                    currentVideoIndex = 0;
+                    
+                    // Save to localStorage
+                    localStorage.setItem(PLAYLIST_KEY, JSON.stringify(playlist));
+                    localStorage.setItem(INDEX_KEY, '0');
+                    
+                    console.log(`Loaded fresh playlist with ${playlist.length} videos`);
+                }
                 
-                // Extract YouTube IDs and shuffle
-                const videoIds = videos.map(v => 
-                    typeof v === 'string' ? v : v.youtube_id
-                );
-                playlist = shuffleArray(videoIds);
-                
-                console.log(`Loaded ${playlist.length} videos`);
                 return playlist;
                 
             } catch (error) {
@@ -211,6 +240,45 @@
                 document.getElementById('loading').innerHTML = 
                     `<p style="color: #ff6600;">Error loading playlist: ${error.message}</p>`;
                 throw error;
+            }
+        }
+
+        // Save current position
+        function savePosition(index) {
+            localStorage.setItem(INDEX_KEY, index.toString());
+        }
+
+        // Advance to next video and reload page
+        function advanceToNextVideo() {
+            currentVideoIndex++;
+            
+            // Check if we've reached the end
+            if (currentVideoIndex >= playlist.length) {
+                console.log('End of playlist - reshuffling...');
+                playlist = shuffleArray(playlist);
+                currentVideoIndex = 0;
+                localStorage.setItem(PLAYLIST_KEY, JSON.stringify(playlist));
+            }
+            
+            // Save new position
+            savePosition(currentVideoIndex);
+            
+            // Reload the page to play next video
+            console.log(`Reloading page to play video ${currentVideoIndex + 1}`);
+            window.location.reload();
+        }
+
+        // Manual skip function
+        function skipVideo() {
+            advanceToNextVideo();
+        }
+
+        // Reset playlist (reshuffle)
+        function resetPlaylist() {
+            if (confirm('Reshuffle the playlist and start over?')) {
+                localStorage.removeItem(PLAYLIST_KEY);
+                localStorage.removeItem(INDEX_KEY);
+                window.location.reload();
             }
         }
 
@@ -223,11 +291,14 @@
                     return;
                 }
 
-                // Create the player
+                // Create the player with current video
+                const currentVideoId = playlist[currentVideoIndex];
+                console.log(`Playing video ${currentVideoIndex + 1}: ${currentVideoId}`);
+                
                 player = new YT.Player('player', {
                     height: '100%',
                     width: '100%',
-                    videoId: playlist[0],
+                    videoId: currentVideoId,
                     playerVars: {
                         autoplay: 1,
                         controls: 1,
@@ -259,9 +330,10 @@
         }
 
         function onPlayerStateChange(event) {
-            // When video ends, play next
+            // When video ends, advance and reload
             if (event.data === YT.PlayerState.ENDED) {
-                playNextVideo();
+                console.log('Video ended - advancing to next and reloading page...');
+                advanceToNextVideo();
             }
             
             // Update now playing when video starts
@@ -275,38 +347,7 @@
             console.log('Auto-skipping to next video...');
             
             // Skip to next video on error
-            playNextVideo();
-        }
-
-        function playNextVideo() {
-            currentVideoIndex++;
-            
-            // Loop back to start when reaching end
-            if (currentVideoIndex >= playlist.length) {
-                console.log('End of playlist - reshuffling...');
-                playlist = shuffleArray(playlist);
-                currentVideoIndex = 0;
-            }
-            
-            // Load next video
-            player.loadVideoById(playlist[currentVideoIndex]);
-            updateNowPlaying();
-        }
-
-        function previousVideo() {
-            currentVideoIndex--;
-            
-            // Loop to end if going before start
-            if (currentVideoIndex < 0) {
-                currentVideoIndex = playlist.length - 1;
-            }
-            
-            player.loadVideoById(playlist[currentVideoIndex]);
-            updateNowPlaying();
-        }
-
-        function nextVideo() {
-            playNextVideo();
+            advanceToNextVideo();
         }
 
         function updateNowPlaying() {
