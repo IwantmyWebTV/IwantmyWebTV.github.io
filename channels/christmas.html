@@ -18,6 +18,60 @@
             min-height: 100vh;
         }
         
+        .snow-container {
+            position: fixed;
+            height: 100%;
+            width: 100%;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .snow {
+            display: block;
+            position: absolute;
+            z-index: 1;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            pointer-events: none;
+            transform: translate3d(0, -100%, 0);
+            animation: snow linear infinite;
+        }
+
+        /* Layer-specific settings */
+        .snow.foreground {
+            background-image: url('../data/foreground.png');
+            animation-duration: 15s;
+        }
+        .snow.foreground.layered {
+            animation-delay: 7.5s;
+        }
+
+        .snow.middleground {
+            background-image: url('../data/middleground.png');
+            animation-duration: 20s;
+        }
+        .snow.middleground.layered {
+            animation-delay: 10s;
+        }
+
+        .snow.background {
+            background-image: url('../data/background.png');
+            animation-duration: 30s;
+        }
+        .snow.background.layered {
+            animation-delay: 15s;
+        }
+
+        @keyframes snow {
+            0% { transform: translate3d(0, -100%, 0); }
+            100% { transform: translate3d(15%, 100%, 0); }
+        }
+        
         .header {
             background: linear-gradient(90deg, #ff0000, #ff6600);
             padding: 20px;
@@ -25,6 +79,8 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            position: relative;
+            z-index: 10;
         }
         
         .channel-logo {
@@ -49,6 +105,8 @@
             max-width: 1400px;
             margin: 30px auto;
             padding: 0 20px;
+            position: relative;
+            z-index: 5;
         }
         
         #player-wrapper {
@@ -148,6 +206,12 @@
     </style>
 </head>
 <body>
+    <div class="snow-container">
+        <div class="snow background"></div>
+        <div class="snow middleground layered"></div>
+        <div class="snow foreground layered"></div>
+    </div>
+
     <div class="header">
         <div class="channel-logo">🎄 Merry Christmas!</div>
         <a href="../index.html" class="back-button">← Back to Channels</a>
@@ -378,4 +442,4 @@
         }
     </script>
 </body>
-</html>
+</html>              
