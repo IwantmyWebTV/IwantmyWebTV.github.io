@@ -1,4 +1,5 @@
-!DOCTYPE html>
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -195,7 +196,7 @@
   <main>
     <section class="player-section">
       <div class="video-container">
-        <iframe id="main-player" src="" allowfullscreen></iframe>
+        <iframe id="main-player" src="" allowfullscreen webkitallowfullscreen mozallowfullscreen></iframe>
       </div>
       <div class="video-info">
         <h2 id="video-title">Loading...</h2>
@@ -216,38 +217,27 @@
   </footer>
 
   <script>
-    // To add your own Internet Archive videos, simply add items to this array.
-    // Use the ID from the archive.org URL: https://archive.org/details/{IDENTIFIER}
+    // Paste either:
+    // 1. Full embed link: "https://archive.org/embed/cloning-the-woolly-mammoth-2016"
+    // 2. Raw iframe tag: '<iframe src="https://archive.org/embed/..." ...></iframe>'
     const videos = [
- {
-        id: "cloning-the-wooly-mammoth-2016",
-        title: "Test: Cloning the Wooly Mammoth",
-        year: "1968 • Horror / Sci-Fi",
-        description: "George A. Romero's iconic classic. A ragtag group of Pennsylvanians barricade themselves in an old farmhouse to remain safe from a horde of flesh-eating ghouls."
+      {
+        embed: "https://archive.org/embed/cloning-the-woolly-mammoth-2016",
+        title: "Cloning the Woolly Mammoth",
+        year: "2016 • Science / Documentary",
+        description: "A deep dive into the scientific possibilities, ethics, and technology behind de-extinction efforts."
       },
       {
-        id: "night_of_the_living_dead",
+        embed: "https://archive.org/embed/night_of_the_living_dead",
         title: "Night of the Living Dead",
         year: "1968 • Horror / Sci-Fi",
-        description: "George A. Romero's iconic classic. A ragtag group of Pennsylvanians barricade themselves in an old farmhouse to remain safe from a horde of flesh-eating ghouls."
+        description: "George A. Romero's iconic classic. A ragtag group barricades themselves in an old farmhouse to survive."
       },
       {
-        id: "A_Trip_To_The_Moon_1902",
+        embed: "https://archive.org/embed/A_Trip_To_The_Moon_1902",
         title: "A Trip to the Moon",
         year: "1902 • Sci-Fi / Short",
-        description: "Georges Méliès' silent masterpiece. A group of astronomers travel to the Moon in a cannon-propelled capsule and explore the lunar surface."
-      },
-      {
-        id: "Charade_1963",
-        title: "Charade",
-        year: "1963 • Mystery / Romance",
-        description: "Starring Audrey Hepburn and Cary Grant. A woman is pursued in Paris by several men who want a fortune her murdered husband had stolen."
-      },
-      {
-        id: "carnival_of_souls",
-        title: "Carnival of Souls",
-        year: "1962 • Psychological Horror",
-        description: "After a fatal drag race accident, a young woman finds herself haunted by grotesque figures and drawn to a mysterious abandoned pavilion."
+        description: "Georges Méliès' silent masterpiece following astronomers traveling to the Moon in a cannon-propelled capsule."
       }
     ];
 
@@ -256,9 +246,18 @@
     const descEl = document.getElementById('video-description');
     const playlistEl = document.getElementById('playlist');
 
+    // Helper to extract the source URL if the user pastes raw <iframe> HTML code
+    function parseEmbedUrl(input) {
+      if (input.includes('<iframe')) {
+        const match = input.match(/src=["']([^"']+)["']/);
+        return match ? match[1] : '';
+      }
+      return input.trim();
+    }
+
     function loadVideo(index) {
       const video = videos[index];
-      player.src = `https://archive.org/embed/${video.id}`;
+      player.src = parseEmbedUrl(video.embed);
       titleEl.textContent = video.title;
       descEl.textContent = video.description;
 
